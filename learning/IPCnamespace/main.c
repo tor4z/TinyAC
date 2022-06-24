@@ -1,37 +1,25 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sched.h>
-#include <unistd.h>
 #include <errno.h>
 #include <sys/mman.h>
-#include <sys/utsname.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
+#include <sys/ipc.h>
 
 
 #define CHILD_STACK_SIZE (1024 * 1024)
 
 
-static void print_nodename()
-{
-    struct utsname utsname;
-    uname(&utsname);
-    printf("%s\n", utsname.nodename);
-}
-
 
 static int child_fn()
 {
-    printf("New UTS namespace nodename:");
-    printf("Change nodename inside new UTS namespace\n");
-    const char *hostname = "NewUTS";
+    const char *hostname = "newHostName";
     sethostname(hostname, strlen(hostname));
-
-    printf("The new hostname is: ");
-    print_nodename();
-
     execl("/bin/bash", "/bin/bash", NULL);
     return 0;
 }
@@ -49,27 +37,24 @@ int main()
         -1, 0
     );
     if (child_stack == MAP_FAILED)
-        fprintf(stderr, "mmap failed.\n");
+    {
+        fprintf(stderr, "alloc stack fail\n");
+        exit(1);
+    }
     child_stack_top = child_stack + CHILD_STACK_SIZE;
-
-    printf("Original UTS namespace nodename: ");
-    print_nodename();
 
     pid_t child_pid = clone(
         child_fn,
         child_stack_top,
-        CLONE_NEWUTS | SIGCHLD,
+        CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD,
         NULL
     );
     if (child_pid == -1)
     {
-        fprintf(stderr, "clone failed (%d).\n", errno);
+        fprintf(stderr, "clone fail\n");
+        munmap(child_stack, CHILD_STACK_SIZE);
+        exit(1);
     }
-
-    sleep(1);
-
-    printf("Original UTS namespace nodename: ");
-    print_nodename();
 
     waitpid(child_pid, NULL, 0);
 
