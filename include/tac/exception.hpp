@@ -8,7 +8,8 @@ namespace tac
 {
 
 #define EXCEPT_MAP(XX) \
-    XX(E, "e") \
+    XX(SYS_ERROR, "System error") \
+    XX(FILE_NOT_EXISTS, "File not exists") \
 
 
 enum TACError
