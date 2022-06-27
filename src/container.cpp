@@ -1,4 +1,5 @@
 #include "tac/container.hpp"
+#include "tac/log.hpp"
 #include "busybox.hpp"
 #include "utils.hpp"
 #include <cstddef>
@@ -148,7 +149,7 @@ int setUnshare()
 
 void createParentProcess()
 {
-    printf("set unshare\n");
+    DEBUG() << "set unshare";
     if (setUnshare() == -1)
     {
         fprintf(stderr, "set unshare error\n");
