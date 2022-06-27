@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <sched.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <sys/mount.h>
@@ -147,6 +148,12 @@ int setUnshare()
 
 void createParentProcess()
 {
+    printf("set unshare\n");
+    if (setUnshare() == -1)
+    {
+        fprintf(stderr, "set unshare error\n");
+    }
+
     pid_t child_pid = fork();
     if(child_pid == 0)
     {
@@ -154,11 +161,13 @@ void createParentProcess()
         perror("execl init");
         exit(1);
     }
-    else
+    else if (child_pid == -1)
     {
-        waitpid(child_pid, NULL, 0);
-        printf("parent\n");
+        perror("fork");
+        fprintf(stderr, "fork init error\n");
     }
+
+    waitpid(child_pid, NULL, 0);
     // Should be never reach hear
     printf("exit\n");
 }
@@ -170,12 +179,6 @@ void containerInitProcess()
     if (copyBusybox() == -1)
     {
         fprintf(stderr, "copy busybox error\n");
-    }
-
-    printf("set unshare\n");
-    if (setUnshare() == -1)
-    {
-        fprintf(stderr, "set unshare error\n");
     }
 
     printf("set mount\n");
@@ -191,9 +194,20 @@ void containerInitProcess()
     }
 
     printf("run busybox\n");
-    execl("/busybox", "/busybox", "sh", NULL);
-    perror("execl init process");
-    exit(1);
+    pid_t child_pid = fork();
+    if(child_pid == 0)
+    {
+        execl("/busybox", "/busybox", "sh", NULL);
+        perror("execl init process");
+        exit(1);
+    }
+    else if (child_pid == -1)
+    {
+        perror("fork");
+        fprintf(stderr, "fork busybox error\n");
+    }
+    waitpid(child_pid, NULL, 0);
+    printf("child process exit.\n");
 }
 
 }
