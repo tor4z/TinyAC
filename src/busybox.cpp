@@ -5,6 +5,7 @@
 #include <linux/limits.h>
 #include <sched.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 
@@ -42,6 +43,8 @@ int installBusybox()
         execl("/busybox", "/busybox", "--install", "/bin", NULL);
         perror("install busybox");
     }
+    waitpid(child_pid, NULL, 0);
+    printf("child process exit.\n");
     return 0;
 }
 
