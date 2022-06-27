@@ -4,5 +4,5 @@ list(APPEND SRCS ${C_SRCS})
 
 
 add_executable(${PROJECT_NAME}
-    container.cpp main.cpp
+    ${SRCS}
 )
