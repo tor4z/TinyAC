@@ -2,6 +2,8 @@
 #include "tac/log.hpp"
 #include "busybox.hpp"
 #include "utils.hpp"
+#include "tar.hpp"
+
 #include <cstddef>
 #include <linux/limits.h>
 #include <stdio.h>
@@ -209,6 +211,19 @@ void containerInitProcess()
     }
     waitpid(child_pid, NULL, 0);
     printf("child process exit.\n");
+}
+
+
+void commitContainer(const char *imageFilename)
+{
+    if (tar(imageFilename, "/container/root"))
+        FATAL() << "Make image";
+}
+
+
+void buildImage()
+{
+
 }
 
 }

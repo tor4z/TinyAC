@@ -1,10 +1,13 @@
 #include "utils.hpp"
 #include "tac/exception.hpp"
+#include <ios>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sstream>
+#include <random>
 
 
 namespace tac
@@ -81,6 +84,37 @@ int copy(const char *src, const char *dest, bool overWrite)
 int copy(const std::string &src, const std::string &dest, bool overWrite)
 {
     return copy(src.c_str(), dest.c_str(), overWrite);
+}
+
+std::string genUUID()
+{
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_int_distribution<> dis(0, 15);
+    static std::uniform_int_distribution<> dis2(8, 11);
+
+    std::stringstream ss;
+    int i;
+
+    ss << std::hex;
+    for (i = 0; i < 8; i++)
+        ss << dis(gen);
+
+    for (i = 0; i < 8; i++)
+        ss << dis(gen);
+
+    ss << "4";
+    for (i = 0; i < 3; i++)
+        ss << dis(gen);
+
+    ss << dis2(gen);
+    for (i = 0; i < 3; i++)
+        ss << dis(gen);
+
+    for (i = 0; i < 12; i++)
+        ss << dis(gen);
+
+    return ss.str();
 }
 
 }
