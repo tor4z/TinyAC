@@ -214,16 +214,16 @@ void containerInitProcess()
 }
 
 
-void commitContainer(const char *imageFilename)
-{
-    if (tar(imageFilename, "/container/root"))
-        FATAL() << "Make image";
-}
+// void commitContainer(const char *imageFilename)
+// {
+//     if (tar(imageFilename, "/container/root"))
+//         FATAL() << "Make image";
+// }
 
 
-void buildImage()
-{
+// void buildImage()
+// {
 
-}
+// }
 
 }
