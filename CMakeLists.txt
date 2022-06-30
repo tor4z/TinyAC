@@ -16,6 +16,12 @@ endif()
 include_directories(include)
 
 
+# config version
+configure_file(
+    ${CMAKE_CURRENT_LIST_DIR}/include/tac/version.hpp.in
+    ${CMAKE_CURRENT_LIST_DIR}/include/tac/version.hpp
+)
+
 add_subdirectory(learning)
 add_subdirectory(src)
 add_subdirectory(tests)

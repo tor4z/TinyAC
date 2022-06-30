@@ -1,0 +1,4 @@
+#pragma once
+
+#define TAC_VERSION_MAJOR @tinyAC_VERSION_MAJOR@
+#define TAC_VERSION_MINOR @tinyAC_VERSION_MINOR@

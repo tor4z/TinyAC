@@ -1,18 +1,28 @@
 #pragma once
 
+#include <map>
+#include <string>
+
 
 namespace tac
 {
 
-enum SubCommand
+enum class SubCommand
 {
-    NONE,
-    RUN,
-    COMMIT,
-    BUILD,
-    RM,
-    LS
+    None,       // no sub comment, for show help or version message
+    Run,        // create and run a conntainer
+    Exec,       // run a exist container
+    Commit,     // commit a container as image
+    Build,      // build a image from config
+    Remove,     // remove a container
+    Kill,       // kill a container
+    List,       // list the containers
+    RemoveImg,  // remove a image
+    Images      // list images
 };
+
+
+extern const std::map<const std::string, SubCommand> subCommandMap;
 
 }
 
