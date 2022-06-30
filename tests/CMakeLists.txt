@@ -5,15 +5,17 @@ find_package(GTest REQUIRED)
 
 file(GLOB TEST_SRCS *.cpp)
 
+
 enable_testing()
-add_executable(tests
+add_executable(testTarget
     ${TEST_SRCS}
 )
 
 target_link_libraries(
-    tests
-    GTest::Main
+    testTarget
+    GTest::Main tac
 )
 
+
 include(GoogleTest)
-gtest_discover_tests(tests)
+gtest_discover_tests(testTarget)

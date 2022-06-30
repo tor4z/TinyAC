@@ -1,8 +1,9 @@
 #include "tac/container.hpp"
 #include "tac/log.hpp"
-#include "busybox.hpp"
-#include "utils.hpp"
-#include "tar.hpp"
+#include "tac/utils.hpp"
+#include "tac/tar.hpp"
+#include "tac/aufs.hpp"
+#include "tac/tar.hpp"
 
 #include <cstddef>
 #include <linux/limits.h>
@@ -41,69 +42,58 @@ int pivotRoot(const char *newRoot)
 
     if(mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) == -1)
     {
-        perror("remount root");
+        PERROR() << "remount root";
         return -1;
     }
 
     if (mount(newRoot, newRoot, NULL, MS_BIND, NULL) == -1)
     {
-        perror("mount new root");
+        PERROR() << "mount new root";
         return -1;;
     }
 
     snprintf(path, sizeof(path), "%s/%s", newRoot, oldRoot);
-    if(access(path, F_OK) == -1)
+    if(Path::safe_mkdir(path, 0777) == -1)
     {
-        if (mkdir(path, 0777) == -1)
-        {
-            perror("mkdir oldRoot");
-            return -1;
-        }
+        PERROR() << "mkdir oldRoot";
+        return -1;
     }
 
     if (pivot_root(newRoot, path) == -1)
     {
-        perror("pivotRoot");
+        PERROR() << "pivotRoot: " << newRoot << ";" << path;
         return -1;
     }
 
     if (chdir("/") == -1)
     {
-        perror("chdir /");
+        PERROR() << "chdir /";
         return -1;
     }
 
-    if (umount2(oldRoot, MNT_DETACH))
+    if (umount2(oldRoot, MNT_DETACH) == -1)
     {
-        perror("umount2");
+        PERROR() << "umount2";
         return -1;
     }
 
-    if (rmdir(oldRoot) == -1)
+    if (Path::safe_rmdir(oldRoot) == -1)
     {
-        perror("rmdir oldRoot");
+        PERROR() << "rmdir oldRoot";
         return -1;
     }
     return 0;
 }
 
 
-int setMount()
+int setMount(const char *rootPath)
 {
-    char cwd[PATH_MAX];
-
-    if (getcwd(cwd, sizeof(cwd)) == NULL)
-    {
-        perror("getcwd");
-        return -1;
-    }
-    if (pivotRoot(cwd) == -1)
+    if (pivotRoot(rootPath) == -1)
         return -1;
 
-    if (access("/proc", F_OK) == -1 &&
-        mkdir("/proc", 0555) == -1)
+    if (Path::safe_mkdir("/proc", 0555) == -1)
     {
-        perror("mkdir /proc");
+        PERROR() << "mkdir /proc";
         return -1;
     }
 
@@ -112,14 +102,13 @@ int setMount()
         MS_NOEXEC | MS_NOSUID | MS_NODEV, NULL
     ) == -1)
     {
-        perror("mount proc");
+        PERROR() << "mount proc";
         return -1;
     }
 
-    if (access("/dev", F_OK) == -1 && 
-        mkdir("/dev", 0755) == -1)
+    if (Path::safe_mkdir("/dev", 0755) == -1)
     {
-        perror("mkdir /proc");
+        PERROR() << "mkdir /proc";
         return -1;
     }
 
@@ -128,7 +117,7 @@ int setMount()
         MS_NOSUID | MS_STRICTATIME, NULL
     ) == -1)
     {
-        perror("mount dev");
+        PERROR() << "mount dev";
         return -1;
     }
     return 0;
@@ -142,7 +131,7 @@ int setUnshare()
         CLONE_NEWNET | CLONE_NEWIPC
     ) == -1)
     {
-        perror("unshare");
+        PERROR() << "unshare";
         return -1;
     }
     return 0;
@@ -153,56 +142,40 @@ void createParentProcess()
 {
     DEBUG() << "set unshare";
     if (setUnshare() == -1)
-    {
-        fprintf(stderr, "set unshare error\n");
-    }
+        ERROR() << "set unshare error";
 
     pid_t child_pid = fork();
     if(child_pid == 0)
     {
         execl(SELF_EXE, SELF_EXE, "init", NULL);
-        perror("execl init");
-        exit(1);
+        PFATAL() << "execl init";
     }
     else if (child_pid == -1)
     {
-        perror("fork");
-        fprintf(stderr, "fork init error\n");
+        PERROR() << "fork init";
     }
 
     waitpid(child_pid, NULL, 0);
-    // Should be never reach hear
-    printf("exit\n");
 }
 
 
 void containerInitProcess()
 {
-    printf("copy busybox\n");
-    if (copyBusybox() == -1)
+    const char *rootPath = "/home/tor/var/tac/containers/con1/mnt";
+
+    AUFS::makeSpace("/home/tor/var/tac/containers/con1");
+
+
+    if (setMount(rootPath) == -1)
     {
-        fprintf(stderr, "copy busybox error\n");
+        FATAL() << "set mount error";
     }
 
-    printf("set mount\n");
-    if (setMount() == -1)
-    {
-        fprintf(stderr, "set mount error\n");
-    }
-
-    printf("installing busybox\n");
-    if (installBusybox() == -1)
-    {
-        fprintf(stderr, "install busybox error\n");
-    }
-
-    printf("run busybox\n");
     pid_t child_pid = fork();
     if(child_pid == 0)
     {
-        execl("/busybox", "/busybox", "sh", NULL);
-        perror("execl init process");
-        exit(1);
+        execl("/bin/sh", "/bin/sh", NULL);
+        PFATAL() << "execl init process";
     }
     else if (child_pid == -1)
     {
@@ -210,15 +183,19 @@ void containerInitProcess()
         fprintf(stderr, "fork busybox error\n");
     }
     waitpid(child_pid, NULL, 0);
-    printf("child process exit.\n");
 }
 
 
-// void commitContainer(const char *imageFilename)
-// {
-//     if (tar(imageFilename, "/container/root"))
-//         FATAL() << "Make image";
-// }
+void commitContainer(const char *imageName)
+{
+    char imagePath[PATH_MAX];
+    snprintf(
+        imagePath, sizeof(imagePath),
+        "%s/%s", "/home/tor/var/tac/images", imageName
+    );
+    if (tar(imagePath, "/home/tor/var/tac/containers/con1") == -1)
+        FATAL() << "Commit container";
+}
 
 
 // void buildImage()

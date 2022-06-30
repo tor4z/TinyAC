@@ -11,7 +11,7 @@ endef
 
 
 # $1: filename
-# $1: sha1 value
+# $2: sha1 value
 define check_file_with_sha1
 	$(eval sha1_string := "$2  $1")
 	$(eval sha1_file := "$1.sha1")

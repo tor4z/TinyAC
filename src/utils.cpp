@@ -1,9 +1,14 @@
-#include "utils.hpp"
+#include "tac/utils.hpp"
 #include "tac/exception.hpp"
+#include "tac/log.hpp"
 #include <ios>
+#include <cstring>
+#include <ostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <string>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sstream>
@@ -13,7 +18,53 @@
 namespace tac
 {
 
-int copy(const char *src, const char *dest, bool overWrite)
+int Path::exists(const char *path)
+{
+    return access(path, F_OK);
+}
+
+
+int Path::exists(const std::string &path)
+{
+    return exists(path.c_str());
+}
+
+
+int Path::safe_mkdir(const char *path, __mode_t mode, bool force)
+{
+    if (exists(path) == 0)
+    {
+        if (force)
+            rmdir(path);
+        else
+            return 0;
+    }
+
+    return mkdir(path, mode);
+}
+
+
+int Path::safe_mkdir(const std::string &path, __mode_t mode, bool force)
+{
+    return safe_mkdir(path.c_str(), mode, force);
+}
+
+
+int Path::safe_rmdir(const char *path)
+{
+    if (exists(path) == 0)
+        return rmdir(path);
+    return 0;
+}
+
+
+int Path::safe_rmdir(const std::string &path)
+{
+    return safe_rmdir(path.c_str());
+}
+
+
+int Path::copy(const char *src, const char *dest, bool overWrite)
 {
     int fd_src, fd_dest;
     int nread, nwrite, ret = 0;
@@ -81,10 +132,11 @@ int copy(const char *src, const char *dest, bool overWrite)
 }
 
 
-int copy(const std::string &src, const std::string &dest, bool overWrite)
+int Path::copy(const std::string &src, const std::string &dest, bool overWrite)
 {
     return copy(src.c_str(), dest.c_str(), overWrite);
 }
+
 
 std::string genUUID()
 {

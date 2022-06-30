@@ -2,6 +2,8 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <ostream>
+#include <random>
 #include <string>
 #include <iostream>
 #include <ctime>
@@ -10,6 +12,7 @@
 #include <iostream>
 #include <cstring>
 #include <cerrno>
+#include <cassert>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -52,7 +55,8 @@ inline std::string timestamp()
     XX(INFO, "INFO") \
     XX(WARN, "WARN") \
     XX(ERROR, "ERROR") \
-    XX(FATAL, "FATAL")
+    XX(FATAL, "FATAL") \
+    XX(ASSERT, "ASSERT")
 
 
 enum LOG_LEVEL
@@ -79,75 +83,98 @@ inline const char *logName(LOG_LEVEL level)
 class Logger
 {
 public:
-    Logger(LOG_LEVEL level, const char *file, int line, int err)
+    Logger(LOG_LEVEL level, const char *file, int line, int err, bool assertRes=true)
         : level_(level),
           file_(file),
           line_(line),
-          err_(err)
+          err_(err),
+          assert_(assertRes),
+          inited_(false)
     {}
 
-    inline void operator<<(const std::string &str)
+    ~Logger()
     {
+        ss_ << "\n";
+
         if (level_ == LOG_DEBUG)
 #ifdef NDEBUG
-            handleDebugInfoWarnError(str);
+            handleDebugInfoWarnError();
+#else
+            ; // just ignore
 #endif
         else if (level_ == LOG_FATAL)
-            handleFatal(str);
+            handleFatal();
+        else if (level_ == LOG_ASSERT)
+            handleAssert();
         else
-            handleDebugInfoWarnError(str);
+            handleDebugInfoWarnError();
+    }
+
+    template<typename T>
+    inline std::stringstream &operator<<(const T &msg)
+    {
+        if (!inited_)
+            fmtMsg(msg);
+        inited_ = true;
+        return ss_;
     }
 private:
     const char *file_;
     const int line_;
     const int err_;
-    LOG_LEVEL level_;
+    const LOG_LEVEL level_;
+    const bool assert_;
+    bool inited_;
+    std::stringstream ss_;
 
-    std::string fmtMsg(const std::string &str)
+    template<typename T>
+    void fmtMsg(const T &msg)
     {
-        std::stringstream ss;
-
-        ss << "[" << logName(level_) << "] "
+        ss_ << "[" << logName(level_) << "] "
            << timestamp() << " " << file_ << ":" << line_
-           << " " << str << std::endl;
-
-        return ss.str();
+           << " " << msg;
     }
 
-    inline void handleDebugInfoWarnError(const std::string &str)
+    inline void handleDebugInfoWarnError()
     {
         if (err_ > 0)
         {
             // PERROR
             int tmp = errno;
             errno = err_;
-            perror(fmtMsg(str).c_str());
+            perror(ss_.str().c_str());
             errno = tmp;
         }
         else
         {
-            if (level_ <= LOG_WARN)
-                std::cout << fmtMsg(str);
-            else
-                std::cerr << fmtMsg(str);
+            std::cout << ss_.str();
         }
     }
 
-    inline void handleFatal(const std::string &str)
+    inline void handleFatal()
     {
         if (err_ > 0)
         {
             // PFATAL
             int tmp = errno;
             errno = err_;
-            perror(fmtMsg(str).c_str());
+            perror(ss_.str().c_str());
             errno = tmp;
         }
         else
         {
-            handleDebugInfoWarnError(str);
+            handleDebugInfoWarnError();
         }
         exit(level_);
+    }
+
+    inline void handleAssert()
+    {
+        if (!assert_)
+        {
+            std::cout << ss_.str();
+            assert(assert_);
+        }
     }
 };
 }
@@ -162,5 +189,8 @@ private:
 #define FATAL() Logger(LOG_FATAL, __FILENAME__, __LINE__, -1)
 #define PERROR() Logger(LOG_ERROR, __FILENAME__, __LINE__, errno) // errno always >= 1
 #define PFATAL() Logger(LOG_FATAL, __FILENAME__, __LINE__, errno)
+
+#define ASSERT(res) Logger(LOG_ASSERT, __FILENAME__, __LINE__, -1, res)
+#define ASSERT0(res) Logger(LOG_ASSERT, __FILENAME__, __LINE__, -1, res == 0)
 
 }

@@ -22,6 +22,6 @@ private:
 
 void createParentProcess();
 void containerInitProcess();
-
+void commitContainer(const char *imageName);
 
 }
