@@ -11,6 +11,7 @@ namespace tac
     XX(SYS_ERROR, "System error") \
     XX(FILE_NOT_EXISTS, "File not exists") \
     XX(SUBCOMMAND_UNKNOWN, "Sub command unkown") \
+    XX(PARSE_CONFIG_ERROR, "Parse config error") \
 
 
 enum TACError
