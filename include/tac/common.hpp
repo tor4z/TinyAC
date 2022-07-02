@@ -17,8 +17,8 @@ enum class SubCommand
     Remove,     // remove a container
     Kill,       // kill a container
     List,       // list the containers
-    RemoveImg,  // remove a image
-    Images      // list images
+    Images,     // list images
+    RemoveImg   // remove a image
 };
 
 
