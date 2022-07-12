@@ -16,7 +16,7 @@ enum class SubCommand
     Build,      // build a image from config
     Remove,     // remove a container
     Kill,       // kill a container
-    List,       // list the containers
+    List,       // list containers
     Images,     // list images
     RemoveImg   // remove a image
 };

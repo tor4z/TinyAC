@@ -46,9 +46,9 @@ int big_endian()
     {
         uint16_t n = 1;
         if ((n & 0x0001) == 1)
-            big_endian_ = 0;
-        else
             big_endian_ = 1;
+        else
+            big_endian_ = 0;
     }
     return big_endian_;
 }
